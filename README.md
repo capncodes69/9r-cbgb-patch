@@ -2,20 +2,20 @@
 
 Two fixes for **CodeBuddy (`cbai/*`) in 9router**.
 
-From the root of your 9router source checkout:
+From the root of your 9router repo:
 
 ```bash
 bash patch.sh
 ```
 
-Or without one, which clones the pinned upstream commit first:
+That is the whole thing. No install, no environment variables, no build step. It
+edits three source files in place; `npm run dev` and `npm run build` pick them up
+as usual.
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/capncodes69/9r-cbgb-patch/main/patch.sh | bash
+bash patch.sh --check     # is it patched? (exit 0 yes, 1 no, 2 upstream moved)
+bash patch.sh --revert    # put the source back to stock
 ```
-
-Run it as many times as you like — it detects an already-applied patch and only
-rebuilds.
 
 ---
 
@@ -71,71 +71,55 @@ on the combo path — so every provider-scoped rule, including the pre-existing
 
 ---
 
-## Requirements
+## What it changes
 
-- **Node.js ≥ 22.5**, npm, git
-- ~1 GB free disk, 5–10 minutes
-
-## What it does
-
-1. Uses your checkout, or clones `decolua/9router` at `87a74e1b` (v0.5.104)
-2. Applies `patches/9r-cbgb-fix.patch` and verifies both fixes landed
-3. `npm install --legacy-peer-deps && npm run build`
-4. If a global `9router` CLI exists, backs up its `app/` and installs the build
-
-If the patch does not apply cleanly it **stops** — a half-patched build is harder
-to diagnose than a clean failure.
-
-## Options
-
-| Variable | Default | Meaning |
-| --- | --- | --- |
-| `NINEROUTER_HOME` | `./9router` | where to clone when not in a checkout |
-| `NINEROUTER_LOCAL_PATCH` | — | use a patch bundle from disk |
-| `NINEROUTER_NPM_CACHE` | `<repo>/.npm-cache` | npm cache location |
-| `NINEROUTER_CLI_DIR` | auto-detected | path to the installed `9router` package |
-| `NINEROUTER_UNINSTALL_NPM` | `0` | force the npm reinstall path in `uninstall.sh` |
-| `NINEROUTER_DRY_RUN` | `0` | show the plan, change nothing |
-
-## Uninstall
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/capncodes69/9r-cbgb-patch/main/uninstall.sh | bash
+```
+open-sse/executors/codebuddy-intl.js    header family on every request
+open-sse/config/errorConfig.js          two provider-scoped backoff rules
+open-sse/services/combo.js              pass the provider to checkFallbackError
 ```
 
-It restores the `app/` directory that `patch.sh` backed up, and removes the
-install record. If there is no backup it reinstalls the stock build from npm
-instead. `NINEROUTER_DRY_RUN=1` shows the plan first.
+Nothing else. No dependencies, no config, no data.
 
-`patch.sh` records what it installed in `<cli>/.9r-cbgb-patch.json` (source
-commit, patch repo, backup path) so the uninstaller undoes exactly that run
-rather than guessing from a timestamp.
+## Requirements
 
-## Your data is not touched
+`git` (used to apply and revert). That is it — no Node version check, because
+this script never runs the app.
 
-This patches the server build only. Dashboard data — SQLite DB, `jwt-secret`,
-`machine-id`, connections, API keys — lives in `~/.9router` and is never written.
+## If the patch does not apply
 
-## Limits
+It stops and tells you. That means upstream moved and the context no longer
+matches — a partial application would leave you with one fix and not the other,
+which is harder to diagnose than a clean failure.
+
+```bash
+bash patch.sh --check   # exit 2 = would not apply
+```
+
+The bundle is written against upstream `87a74e1b` (v0.5.104).
+
+## Notes and limits
 
 - **Downstream patch, not an upstream merge.** Reported upstream
   ([#4944](https://github.com/decolua/9router/pull/4944),
   [#5024](https://github.com/decolua/9router/issues/5024)) but not merged. When
   they are, stop using this.
-- **Pinned to v0.5.104.** That is what the patch was written and tested against.
-  On a newer upstream it will refuse to apply rather than guess.
-- **WAF backoff is not verified against a real block.** Classification and the
-  backoff path are tested against the exact upstream payloads from the report;
-  triggering a real block would burn a real account. When a block happens you
-  should see `AUTH <conn> locked modelLock_<model> for Ns [400]` with `N`
-  increasing per attempt.
+- **`workbuddy.ai` support is partial.** The header family handles both brand
+  hosts, but only `codebuddy-intl` is registered as a provider upstream.
+- **The WAF backoff is not verified against a real block.** Classification and
+  the backoff path are tested against the exact upstream payloads from the
+  report; triggering a real block would burn a real account. When a block does
+  happen you should see `AUTH <conn> locked modelLock_<model> for Ns [400]` with
+  `N` increasing per attempt.
+- **Not included:** the brand-host DNS pin and the `access_token` usage fix from
+  the same downstream branch. Those are separate concerns; this bundle is
+  deliberately limited to the two CodeBuddy defects.
 
 ## Layout
 
 ```
-patch.sh                      install / rebuild
-uninstall.sh                  restore the stock build
-patches/9r-cbgb-fix.patch     the bundle: 3 files, no deploy config
+patch.sh                      apply / revert / check
+patches/9r-cbgb-fix.patch     the bundle: 3 files
 ```
 
 ## License
