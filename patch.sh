@@ -139,11 +139,12 @@ ok "build complete: .next/standalone"
 NPM_ROOT=$(npm root -g 2>/dev/null || true)
 CLI_DIR=""
 for candidate in \
+  "${NINEROUTER_CLI_DIR:-}" \
   "${NPM_ROOT:-/nonexistent}/9router" \
   "$HOME/.npm-global/lib/node_modules/9router" \
   "/usr/local/lib/node_modules/9router" \
   "/opt/homebrew/lib/node_modules/9router"; do
-  [[ -d "$candidate" ]] && { CLI_DIR="$candidate"; break; }
+  [[ -n "$candidate" && -d "$candidate" ]] && { CLI_DIR="$candidate"; break; }
 done
 
 if [[ -z "$CLI_DIR" ]]; then
@@ -163,11 +164,25 @@ fi
 cp -R .next/standalone "$CLI_DIR/app" || die "cannot install into $CLI_DIR/app (try sudo)"
 ok "installed"
 
+# Record what was installed so uninstall.sh can undo exactly this run rather than
+# guessing from a timestamp. Lives beside app/ so it travels with the CLI.
+cat > "$CLI_DIR/.9r-cbgb-patch.json" <<JSON
+{
+  "installedAt": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
+  "sourceRepo": "$REPO_DIR",
+  "sourceCommit": "$(git -C "$REPO_DIR" rev-parse HEAD 2>/dev/null || echo unknown)",
+  "patchRepo": "$REPO",
+  "backup": "$BACKUP",
+  "hadPreviousApp": $([[ -d "$BACKUP" ]] && echo true || echo false)
+}
+JSON
+ok "recorded in $CLI_DIR/.9r-cbgb-patch.json"
+
 echo
 log "Done."
 echo "  Start it the usual way:  9router"
 echo
-echo "  Roll back with:"
-echo "    rm -rf \"$CLI_DIR/app\" && mv \"$BACKUP\" \"$CLI_DIR/app\""
+echo "  To undo everything:"
+echo "    curl -fsSL https://raw.githubusercontent.com/$REPO/main/uninstall.sh | bash"
 echo
 dim "Your data in ~/.9router was not touched."

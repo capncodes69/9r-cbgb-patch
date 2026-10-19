@@ -93,17 +93,23 @@ to diagnose than a clean failure.
 | `NINEROUTER_HOME` | `./9router` | where to clone when not in a checkout |
 | `NINEROUTER_LOCAL_PATCH` | — | use a patch bundle from disk |
 | `NINEROUTER_NPM_CACHE` | `<repo>/.npm-cache` | npm cache location |
+| `NINEROUTER_CLI_DIR` | auto-detected | path to the installed `9router` package |
+| `NINEROUTER_UNINSTALL_NPM` | `0` | force the npm reinstall path in `uninstall.sh` |
+| `NINEROUTER_DRY_RUN` | `0` | show the plan, change nothing |
 
-## Rollback
-
-The script prints the backup path. To undo:
+## Uninstall
 
 ```bash
-rm -rf "$(npm root -g)/9router/app"
-mv "$(npm root -g)/9router/app.bak-<timestamp>" "$(npm root -g)/9router/app"
+curl -fsSL https://raw.githubusercontent.com/capncodes69/9r-cbgb-patch/main/uninstall.sh | bash
 ```
 
-Or `npm i -g 9router@latest` to restore the stock build.
+It restores the `app/` directory that `patch.sh` backed up, and removes the
+install record. If there is no backup it reinstalls the stock build from npm
+instead. `NINEROUTER_DRY_RUN=1` shows the plan first.
+
+`patch.sh` records what it installed in `<cli>/.9r-cbgb-patch.json` (source
+commit, patch repo, backup path) so the uninstaller undoes exactly that run
+rather than guessing from a timestamp.
 
 ## Your data is not touched
 
@@ -127,7 +133,8 @@ This patches the server build only. Dashboard data — SQLite DB, `jwt-secret`,
 ## Layout
 
 ```
-patch.sh                      the script
+patch.sh                      install / rebuild
+uninstall.sh                  restore the stock build
 patches/9r-cbgb-fix.patch     the bundle: 3 files, no deploy config
 ```
 
