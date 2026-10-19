@@ -40,6 +40,19 @@ case "${1:-}" in
   *) die "unknown option: $1 (try --help)" ;;
 esac
 
+# ── Platform ────────────────────────────────────────────────────────────────
+# This script is POSIX sh/bash: Linux, macOS, and the Git Bash / WSL shells that
+# ship with a Windows dev setup. On native Windows PowerShell or cmd, `bash` may
+# not exist at all, so point at patch.ps1 rather than failing with a confusing
+# "command not found" further down.
+case "$(uname -s 2>/dev/null || echo unknown)" in
+  Linux*)                  PLATFORM="Linux" ;;
+  Darwin*)                 PLATFORM="macOS" ;;
+  MINGW*|MSYS*|CYGWIN*)    PLATFORM="Windows (Git Bash)" ;;
+  *)                       PLATFORM="$(uname -s 2>/dev/null || echo unknown)" ;;
+esac
+dim "platform: $PLATFORM"
+
 # ── Are we in a 9router checkout? ───────────────────────────────────────────
 [[ -f package.json ]] || die "run this from the root of a 9router checkout (no package.json here)"
 grep -q '"9router-app"' package.json 2>/dev/null \
@@ -48,7 +61,12 @@ grep -q '"9router-app"' package.json 2>/dev/null \
   || die "open-sse/ not found — is this a complete checkout?"
 ok "9router checkout: $PWD"
 
-command -v git >/dev/null 2>&1 || die "git not found (used to apply and revert the patch)"
+if ! command -v git >/dev/null 2>&1; then
+  die "git not found — it is used to apply and revert the patch.
+     Linux:   sudo apt install git     (or dnf/pacman)
+     macOS:   xcode-select --install
+     Windows: winget install Git.Git"
+fi
 
 # ── Load the patch ──────────────────────────────────────────────────────────
 TMP_PATCH=$(mktemp)

@@ -2,19 +2,97 @@
 
 Two fixes for **CodeBuddy (`cbai/*`) in 9router**.
 
-From the root of your 9router repo:
+Run it from the root of your 9router repo. No install, no environment variables,
+no build step — it edits three source files in place, and `npm run dev` /
+`npm run build` pick them up as usual.
+
+---
+
+## Run it
+
+### Linux / macOS / WSL / Git Bash
 
 ```bash
 bash patch.sh
 ```
 
-That is the whole thing. No install, no environment variables, no build step. It
-edits three source files in place; `npm run dev` and `npm run build` pick them up
-as usual.
+Or without saving the file first:
 
 ```bash
-bash patch.sh --check     # is it patched? (exit 0 yes, 1 no, 2 upstream moved)
-bash patch.sh --revert    # put the source back to stock
+curl -fsSL https://raw.githubusercontent.com/capncodes69/9r-cbgb-patch/main/patch.sh | bash
+```
+
+### Windows (PowerShell)
+
+```powershell
+.\patch.ps1
+```
+
+Or one line, without saving the file:
+
+```powershell
+irm https://raw.githubusercontent.com/capncodes69/9r-cbgb-patch/main/patch.ps1 | iex
+```
+
+> PowerShell blocks unsigned scripts by default. If `.\patch.ps1` refuses to run,
+> use the `irm | iex` form above, or allow it for this session:
+> ```powershell
+> Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
+> ```
+
+### cmd.exe
+
+Use the PowerShell one-liner:
+
+```cmd
+powershell -NoProfile -Command "irm https://raw.githubusercontent.com/capncodes69/9r-cbgb-patch/main/patch.ps1 | iex"
+```
+
+The `irm | iex` form cannot take parameters, so check and revert use environment
+variables instead:
+
+```powershell
+$env:NINEROUTER_CHECK=1;  irm https://raw.githubusercontent.com/capncodes69/9r-cbgb-patch/main/patch.ps1 | iex
+$env:NINEROUTER_REVERT=1; irm https://raw.githubusercontent.com/capncodes69/9r-cbgb-patch/main/patch.ps1 | iex
+```
+
+---
+
+## Check / revert
+
+| | Linux, macOS, WSL, Git Bash | Windows PowerShell |
+| --- | --- | --- |
+| Apply | `bash patch.sh` | `.\patch.ps1` |
+| Check | `bash patch.sh --check` | `.\patch.ps1 -Check` |
+| Revert | `bash patch.sh --revert` | `.\patch.ps1 -Revert` |
+
+`--check` exits `0` when patched, `1` when not patched, and `2` when the patch
+would not apply (upstream moved). Applying twice is a no-op, not an error.
+
+---
+
+## Requirements
+
+| | Needed for |
+| --- | --- |
+| **git** | applying and reverting the patch |
+| bash | `patch.sh` only — present by default on Linux/macOS, via Git Bash or WSL on Windows |
+| PowerShell 5.1+ | `patch.ps1` only — built into Windows 10/11 |
+
+Nothing else. Node.js is **not** required by the script — you already have it if
+you can run 9router.
+
+Install git if it is missing:
+
+```bash
+# Linux
+sudo apt install git        # or: sudo dnf install git / sudo pacman -S git
+# macOS
+xcode-select --install
+```
+```powershell
+# Windows
+winget install Git.Git
 ```
 
 ---
@@ -79,22 +157,13 @@ open-sse/config/errorConfig.js          two provider-scoped backoff rules
 open-sse/services/combo.js              pass the provider to checkFallbackError
 ```
 
-Nothing else. No dependencies, no config, no data.
-
-## Requirements
-
-`git` (used to apply and revert). That is it — no Node version check, because
-this script never runs the app.
+Three files, +221/−2. No dependencies, no config, no data.
 
 ## If the patch does not apply
 
 It stops and tells you. That means upstream moved and the context no longer
 matches — a partial application would leave you with one fix and not the other,
 which is harder to diagnose than a clean failure.
-
-```bash
-bash patch.sh --check   # exit 2 = would not apply
-```
 
 The bundle is written against upstream `87a74e1b` (v0.5.104).
 
@@ -118,7 +187,8 @@ The bundle is written against upstream `87a74e1b` (v0.5.104).
 ## Layout
 
 ```
-patch.sh                      apply / revert / check
+patch.sh                      apply / revert / check  (Linux, macOS, WSL, Git Bash)
+patch.ps1                     apply / revert / check  (Windows PowerShell)
 patches/9r-cbgb-fix.patch     the bundle: 3 files
 ```
 
