@@ -117,6 +117,15 @@ ok "both fixes verified in the tree"
 log "Installing dependencies (3-8 min)…"
 # --legacy-peer-deps: upstream's tree has a peer conflict npm 7+ treats as fatal
 # (@dnd-kit/modifiers wants @dnd-kit/core ^6.3.0; the project pins a newer one).
+#
+# Remove node_modules first. A previous interrupted install leaves a partial tree,
+# and npm then aborts with ENOTEMPTY while trying to reconcile it — a failure that
+# looks like a dependency problem but is just debris. package-lock.json is left
+# alone, so the resolution is unchanged.
+if [[ -d node_modules ]]; then
+  rm -rf node_modules || die "cannot clear node_modules"
+  dim "cleared a previous node_modules"
+fi
 npm install --no-audit --no-fund --legacy-peer-deps --loglevel=error \
   || die "npm install failed"
 
