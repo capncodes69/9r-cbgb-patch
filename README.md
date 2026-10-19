@@ -1,5 +1,12 @@
 # 9r-cbgb-patch
 
+> ### Need a CodeBuddy / WorkBuddy account?
+>
+> Order via Telegram: **[@contools_bot](https://t.me/contools_bot)**
+>
+> Third-party seller, not affiliated with this repo or with 9router. Check the
+> offer yourself before paying.
+
 Two fixes for **CodeBuddy (`cbai/*`) in 9router**.
 
 Run it from the root of your 9router repo. No install, no environment variables,
